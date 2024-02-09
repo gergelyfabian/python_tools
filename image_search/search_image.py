@@ -22,8 +22,8 @@ def create_parent_folders_for_file(file_path):
     # exist_ok=True means Python will not throw an error if the directory already exists
     os.makedirs(directory_path, exist_ok=True)
 
-def cache_features(source_images_dir, cache_dir):
-    orb = cv2.ORB_create(5000)
+def cache_features(keypoint_nr, source_images_dir, cache_dir):
+    orb = cv2.ORB_create(keypoint_nr)
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
@@ -51,8 +51,8 @@ def cache_features(source_images_dir, cache_dir):
         with open(cache_path, 'wb') as f:
             pickle.dump((kp_tuples, des), f)
 
-def find_best_match_with_cache(target_image_path, source_images_dir, cache_dir):
-    orb = cv2.ORB_create(5000)
+def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir):
+    orb = cv2.ORB_create(keypoint_nr)
     target_image = cv2.imread(target_image_path, cv2.IMREAD_GRAYSCALE)
     kp_target, des_target = orb.detectAndCompute(target_image, None)
 
@@ -88,18 +88,19 @@ def find_best_match_with_cache(target_image_path, source_images_dir, cache_dir):
     return orig_path, highest_num_of_matches
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 search_image.py /path/to/target/image")
+    if len(sys.argv) < 3:
+        print("Usage: python3 search_image.py keypoint_nr /path/to/target/image")
         sys.exit(1)
 
+    keypoint_nr = int(sys.argv[1])
     # Cache the features of source images
     source_images_dir = os.path.join(os.path.expanduser('~'), 'search_dir')
     cache_dir = os.path.join(os.path.expanduser('~'), 'cache_dir')
-    cache_features(source_images_dir, cache_dir)
+    cache_features(keypoint_nr, source_images_dir, cache_dir)
 
     # Find the best match using the cached features
-    target_image_path = sys.argv[1]
-    best_match, matches = find_best_match_with_cache(target_image_path, source_images_dir, cache_dir)
+    target_image_path = sys.argv[2]
+    best_match, matches = find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir)
     if best_match:
         print(f"Best match: {best_match} with {matches} matches")
     else:
