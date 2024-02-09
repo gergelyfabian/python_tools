@@ -70,6 +70,8 @@ def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir
     total_files = len(cache_files)
     percent_threshold = total_files / 100  # 1% of total files
     processed_files = 0
+    
+    match_scores = []
 
     for cache_file in cache_files:
         processed_files += 1
@@ -82,15 +84,17 @@ def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir
                 matches = bf.match(des_target, des_source)
                 num_of_matches = len(matches)
                 
-                if num_of_matches > highest_num_of_matches:
-                    highest_num_of_matches = num_of_matches
-                    best_match_img_path = cache_file  # Remove .pkl extension
+                # Store the number of matches along with the corresponding file path
+                orig_path = cache_file.replace(cache_dir, source_images_dir).replace(".pkl", ".jpg")
+                match_scores.append((orig_path, num_of_matches))
 
         if logging_enabled and processed_files % percent_threshold < 1:
             print(f"Processed {processed_files / total_files * 100:.2f}% of images...")
 
-    orig_path = best_match_img_path.replace(cache_dir, source_images_dir).replace(".pkl", ".jpg")
-    return orig_path, highest_num_of_matches
+    # Sort the match_scores list by the number of matches in descending order and get the top 20
+    top_matches = sorted(match_scores, key=lambda x: x[1], reverse=True)[:20]
+
+    return top_matches
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -98,15 +102,17 @@ if __name__ == "__main__":
         sys.exit(1)
 
     keypoint_nr = int(sys.argv[1])
-    # Cache the features of source images
+    target_image_path = sys.argv[2]
     source_images_dir = os.path.join(os.path.expanduser('~'), 'search_dir')
     cache_dir = os.path.join(os.path.expanduser('~'), 'cache_dir')
+
+    # Cache the features of source images
     cache_features(keypoint_nr, source_images_dir, cache_dir)
 
     # Find the best match using the cached features
-    target_image_path = sys.argv[2]
-    best_match, matches = find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir)
-    if best_match:
-        print(f"{best_match}  {matches}")
+    top_matches = find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir)
+    if top_matches:
+        for match in top_matches:
+            print(f"{match[0]}  {match[1]}")
     else:
-        os.exit(1)
+        sys.exit(1)
