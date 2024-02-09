@@ -5,6 +5,8 @@ import numpy as np
 import pickle
 import glob
 
+logging_enabled = False
+
 def keypoint_to_tuple(kp):
     #print("Converting to tuple: %s" % str((kp.pt, kp.size, kp.angle, kp.response, kp.octave, kp.class_id)))
     return (kp.pt, kp.size, kp.angle, kp.response, kp.octave, kp.class_id)
@@ -27,12 +29,15 @@ def cache_features(keypoint_nr, source_images_dir, cache_dir):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    print("Caching features")
+    if logging_enabled:
+        print("Caching features")
 
     for file in glob.glob(source_images_dir + "/**/*.jpg", recursive = True):
-        #print("Caching %s" % file)
+        if logging_enabled:
+            print("Caching %s" % file)
         cache_path = file.replace(source_images_dir, cache_dir).replace(".jpg", ".pkl")
-        #print("Cache path: %s" % cache_path)
+        if logging_enabled:
+            print("Cache path: %s" % cache_path)
         
         create_parent_folders_for_file(cache_path)
         
@@ -81,7 +86,7 @@ def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir
                     highest_num_of_matches = num_of_matches
                     best_match_img_path = cache_file  # Remove .pkl extension
 
-        if processed_files % percent_threshold < 1:
+        if logging_enabled and processed_files % percent_threshold < 1:
             print(f"Processed {processed_files / total_files * 100:.2f}% of images...")
 
     orig_path = best_match_img_path.replace(cache_dir, source_images_dir).replace(".pkl", ".jpg")
@@ -102,6 +107,6 @@ if __name__ == "__main__":
     target_image_path = sys.argv[2]
     best_match, matches = find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir)
     if best_match:
-        print(f"Best match: {best_match} with {matches} matches")
+        print(f"{best_match}  {matches}")
     else:
-        print("No match found.")
+        os.exit(1)
