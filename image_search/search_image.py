@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pickle
 import glob
+import argparse
 
 logging_enabled = False
 
@@ -56,7 +57,7 @@ def cache_features(keypoint_nr, source_images_dir, cache_dir):
         with open(cache_path, 'wb') as f:
             pickle.dump((kp_tuples, des), f)
 
-def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir):
+def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir, num_results):
     orb = cv2.ORB_create(keypoint_nr)
     target_image = cv2.imread(target_image_path, cv2.IMREAD_GRAYSCALE)
     kp_target, des_target = orb.detectAndCompute(target_image, None)
@@ -92,25 +93,35 @@ def find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir
             print(f"Processed {processed_files / total_files * 100:.2f}% of images...")
 
     # Sort the match_scores list by the number of matches in descending order and get the top 20
-    top_matches = sorted(match_scores, key=lambda x: x[1], reverse=True)[:20]
+    top_matches = sorted(match_scores, key=lambda x: x[1], reverse=True)[:num_results]
 
     return top_matches
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python3 search_image.py keypoint_nr /path/to/target/image")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Search for an image based on keypoints.')
 
-    keypoint_nr = int(sys.argv[1])
-    target_image_path = sys.argv[2]
-    source_images_dir = os.path.join(os.path.expanduser('~'), 'search_dir')
-    cache_dir = os.path.join(os.path.expanduser('~'), 'cache_dir')
+    parser.add_argument('--keypoint_nr', type=int, help='Number of keypoints', required=True)
+    parser.add_argument('--search_dir', type=str, help='Search dir', required=True)
+    parser.add_argument('--cache_dir', type=str, help='Cache dir', required=True)
+    parser.add_argument('--debug', action='store_true', help='Turn on debugging')
+    parser.add_argument('-n', '--num_results', type=int, default=1, help='Number of best results to show')
+    parser.add_argument('--target_image_path', type=str, help='Path to the target image', required=True)
+
+    args = parser.parse_args()
+
+    keypoint_nr = args.keypoint_nr
+    target_image_path = args.target_image_path
+    source_images_dir = args.search_dir
+    cache_dir = args.cache_dir
+    
+    if args.debug:
+        logging_enabled = True
 
     # Cache the features of source images
     cache_features(keypoint_nr, source_images_dir, cache_dir)
 
     # Find the best match using the cached features
-    top_matches = find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir)
+    top_matches = find_best_match_with_cache(keypoint_nr, target_image_path, source_images_dir, cache_dir, args.num_results)
     if top_matches:
         for match in top_matches:
             print(f"{match[0]}  {match[1]}")
